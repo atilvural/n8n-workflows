@@ -1,0 +1,234 @@
+{
+  "name": "Idea Approver",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "jsonExample",
+        "jsonExample": "{\n    \"category\": \"AI Developer Tools\",\n    \"leads\": [\n      \"OutLLM-Founder\",\n      \"harinijan\",\n      \"Maleficent_Pair4920\",\n      \"ThatsEllis\"\n    ],\n    \"description\": \"A comprehensive LLMOps platform for developers using multiple AI models (OpenAI, Anthropic, Gemini, etc.). Manages API keys securely, routes requests intelligently based on cost, speed, or reliability, provides deep, real-time cost analytics broken down by model/project, identifies optimization opportunities (e.g., prompt caching, model suggestions), and offers unified logging/debugging. Essential for controlling escalating costs and managing complexity in production AI applications.\",\n    \"mergedIdeas\": [\n      22,\n      36\n    ]\n  }"
+      },
+      "id": "b6621455-5612-48a5-b2c6-1fa510d05aa6",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        0,
+        0
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendAndWait",
+        "guildId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1240275995999866924",
+          "cachedResultUrl": "https://discord.com/channels/1240275995999866924",
+          "cachedResultName": "XOD Apps"
+        },
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1363953712866918522",
+          "cachedResultUrl": "https://discord.com/channels/1240275995999866924/1363953712866918522",
+          "cachedResultName": "saas-ideas"
+        },
+        "message": "=*New Idea {{ $json.category }}* \n{{ $json.description }}\n\nMerged {{ $json.mergedIdeas?.length || 0 }} ideas. Potential {{ $json.leads?.length || 0 }} users",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double"
+          }
+        },
+        "options": {}
+      },
+      "id": "1086b2a2-b926-4851-844f-f3734a8bb651",
+      "name": "Discord",
+      "type": "n8n-nodes-base.discord",
+      "position": [
+        220,
+        0
+      ],
+      "webhookId": "d68a25b0-7dd7-457c-a3df-c35944ec3e2d",
+      "typeVersion": 2,
+      "credentials": {
+        "discordBotApi": {
+          "id": "pWeoiY2cmEA7W8r0",
+          "name": "Discord Bot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c6a9e5dd-5c5d-4d27-ba33-06398aefba28",
+              "operator": {
+                "name": "filter.operator.equals",
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json.result.data.Interested }}",
+              "rightValue": "Yes"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "23c8ae52-85a6-4d29-98ec-8b5bb5acb12a",
+      "name": "If",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        820,
+        300
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {},
+      "id": "bbf31ca5-2917-4dbd-a57e-c237f008367b",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        380,
+        300
+      ],
+      "typeVersion": 3.1
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "delete from saas_ideas where id in ({{ $json.result.mergedIdeas.join(',') }})",
+        "options": {}
+      },
+      "id": "a74d4f7f-5dc2-4cfa-adb0-1b321051dafe",
+      "name": "Delete ideas if not interested",
+      "type": "n8n-nodes-base.mySql",
+      "position": [
+        1060,
+        400
+      ],
+      "typeVersion": 2.4,
+      "credentials": {
+        "mySql": {
+          "id": "yGNalRtB0QeQ1zRf",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = {};\n\n// Loop through all input items\nfor (const item of $input.all()) {\n  Object.assign(result, item.json);\n}\n\nreturn {result};\n"
+      },
+      "id": "cab3e156-8545-4f49-b799-7cf15a550287",
+      "name": "Code",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        600,
+        300
+      ],
+      "typeVersion": 2
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "leads": [
+            "OutLLM-Founder",
+            "harinijan",
+            "Maleficent_Pair4920",
+            "ThatsEllis"
+          ],
+          "category": "LLMOps / Cloud Cost Management",
+          "description": "A comprehensive LLMOps platform for managing multiple AI models (OpenAI, Anthropic, Gemini, etc.). Unifies API key management, request routing (cost/latency optimization), robust failover logic, prompt versioning, and provides deep, real-time analytics focused on cost tracking, usage patterns, and actionable optimization insights (e.g., caching, model selection) to control escalating LLM API expenses. Ideal for AI-driven startups and developers.",
+          "mergedIdeas": [
+            22,
+            36
+          ]
+        }
+      }
+    ]
+  },
+  "connections": {
+    "If": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Delete ideas if not interested",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discord": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Discord",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "94e1e8de-8dc7-4858-bd3c-5ce11ca9257b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4920a419623b1fa5f5df725a2d9e95766c10843e59b418ee634a61419987e876"
+  },
+  "id": "hBIJjlF7YxffYNLC",
+  "tags": []
+}

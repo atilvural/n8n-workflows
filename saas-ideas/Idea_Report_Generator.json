@@ -1,0 +1,406 @@
+{
+  "name": "Idea Report Generator",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "e6428ff1-f57d-4c76-a9d1-6d64f34ccaf1",
+      "name": "When clicking ‘Test workflow’",
+      "type": "n8n-nodes-base.manualTrigger",
+      "position": [
+        0,
+        0
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "You are a startup-savvy AI Entrepreneur Assistant.\n\nYour task is to fetch SaaS ideas from a MySQL saas_ideas table, where each record includes:\n\nid\ncategory\ndescription\nleads (comma-separated usernames)\nposts (comma-separated Reddit post URLs)\n\nYour Role:\nCarefully read each SaaS idea and understand the pain point, opportunity, and context.\n\nIdentify similar or complementary ideas across different entries.\n\nGroup, merge, or extend related ideas into larger or more complete micro-SaaS concepts.\n\nPreserve key users (leads) connected to the original ideas under the merged version.\n\nWhere possible, improve the description to make it sharper and more actionable.\n\n🛠 Instructions:\nAnalyze all ideas:\n\nUnderstand the niche, pain points, and potential customers.\n\nGroup or Merge:\n\nMerge ideas that target the same audience, solve similar problems, or could naturally be bundled.\n\nYou can merge 2–5 ideas together if they logically fit.\n\nCreate a New Extended Idea:\n\nWrite a clear and strong description for the extended idea.\n\nMention what makes it a better or more complete SaaS opportunity.\n\nList Leads:\n\nCombine all usernames (leads) from the original ideas that were merged.\n\nIgnore the original IDs.\n\nThis is creating a new grouped version, not updating old ones directly.\n\n📝 Output Format:\nReturn only a valid JSON array, no markdown or extra text.\n\n[\n  {\n    \"category\": \"Extended Automation Platform\",\n    \"leads\": [\"user1\", \"user2\", \"user3\"],\n    \"description\": \"Combines tools for workflow automation and AI-driven decision-making for indie SaaS founders. Integrates process automation with customer engagement features. Ideal for solo founders and micro-startups.\",\n    \"mergedIdeas\": [12, 15, 18]\n  },\n  {\n    \"category\": \"Creator Analytics & Growth Tool\",\n    \"leads\": [\"creator123\", \"growthhacker\", \"indiehustler\"],\n    \"description\": \"An analytics and content growth platform that helps creators optimize publishing schedules and audience engagement across multiple platforms with AI insights.\",\n    \"mergedIdeas\": [5, 8]\n  }\n]\n✅ Important:\nmergedIdeas: Must include the list of original id numbers used to create the new extended idea.\n\nleads: Merge usernames across all grouped ideas (no duplicates if possible).\n\ncategory: Pick a simple, broad SaaS category.\n\nReturn pure JSON only, no markdown or explanation.\n\nIf no extensions are possible, return an empty array [].\n\n📌 Small Example\nGiven two ideas:\n\n\"Tool for scheduling Twitter posts\"\n\n\"Analytics for Twitter engagement\"\n\n➡️ You can merge them into:\n\n\"Twitter Growth Assistant: A platform to schedule posts and optimize posting times based on engagement analytics.\"",
+        "options": {}
+      },
+      "id": "07d8b5e5-345b-4ce6-8b93-78ff578f3a7f",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        400,
+        0
+      ],
+      "typeVersion": 1.8
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-pro-exp",
+        "options": {}
+      },
+      "id": "b0a949f4-21c6-4cdc-96c4-9743498ac36d",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        360,
+        240
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "UYGDfReEenKELOHa",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "saas_ideas",
+          "cachedResultName": "saas_ideas"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "6ee5e719-affb-43be-bb81-4cefd19511db",
+      "name": "MySQL",
+      "type": "n8n-nodes-base.mySqlTool",
+      "position": [
+        600,
+        240
+      ],
+      "typeVersion": 2.4,
+      "credentials": {
+        "mySql": {
+          "id": "yGNalRtB0QeQ1zRf",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  let rawString = item.json.output;\n\n// Step 1: Remove the markdown wrapping\nconst jsonString = rawString\n  .replace(/^```json\\s*/i, '') // remove the opening ```json (case-insensitive)\n  .replace(/```$/, '')         // remove the closing ``` (at the end)\n  .trim();\n\n\n return JSON.parse(jsonString);\n}"
+      },
+      "id": "dd2370af-5ec0-4a01-b303-a1ad5c228bf4",
+      "name": "Code",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        800,
+        0
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "12be8927-7350-4d5c-8248-47853d457c32",
+      "name": "Loop Over Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "position": [
+        1160,
+        0
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "hBIJjlF7YxffYNLC",
+          "cachedResultName": "Idea Approver"
+        },
+        "workflowInputs": {
+          "value": {
+            "leads": "={{ $json.leads }}",
+            "category": "={{ $json.category }}",
+            "description": "={{ $json.description }}",
+            "mergedIdeas": "={{ $json.mergedIdeas }}"
+          },
+          "schema": [
+            {
+              "id": "category",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "category",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "leads",
+              "type": "array",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "leads",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "description",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "description",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mergedIdeas",
+              "type": "array",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "mergedIdeas",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "2174eef4-cf3a-4452-b7a5-5757f7282a26",
+      "name": "Execute Workflow1",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "position": [
+        1440,
+        20
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "id": "756d6130-4527-40a1-90f8-c9bb3d577b5c",
+      "name": "Wait",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        1660,
+        20
+      ],
+      "webhookId": "a42e3f61-b7e9-42cb-8ad8-824be74af582",
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 4 * * 3"
+            }
+          ]
+        }
+      },
+      "id": "528ec84f-3dbd-4360-af33-e2f188355c24",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        0,
+        200
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nlet ideasContent = '';\n\nfor (let i = 0; i < items.length; i += 2) {\n  const item1 = items[i].json;\n  const item2 = items[i + 1] ? items[i + 1].json : null;\n\n  ideasContent += `\n<tr>\n  <td style=\"padding: 20px; background-color: #ffffff; width: 50%; vertical-align: top; border-bottom: 1px solid #e0e0e0;\">\n    <h2 style=\"font-family: 'Fira Sans', Arial, sans-serif; font-size: 20px; color: #151515; margin: 0 0 10px;\">${item1.category}</h2>\n    <p style=\"font-family: 'Fira Sans', Arial, sans-serif; font-size: 14px; color: #555555; margin: 0;\">${item1.description}</p>\n  </td>\n  <td style=\"padding: 20px; background-color: #ffffff; width: 50%; vertical-align: top; border-bottom: 1px solid #e0e0e0;\">\n    ${\n      item2\n        ? `<h2 style=\"font-family: 'Fira Sans', Arial, sans-serif; font-size: 20px; color: #151515; margin: 0 0 10px;\">${item2.category}</h2>\n           <p style=\"font-family: 'Fira Sans', Arial, sans-serif; font-size: 14px; color: #555555; margin: 0;\">${item2.description}</p>`\n        : ''\n    }\n  </td>\n</tr>\n`;\n}\n\nconst html = `\n<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n<title>Micro SaaS Ideas Newsletter</title>\n</head>\n<body style=\"background-color: #f4f4f4; margin: 0; padding: 0;\">\n<table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" bgcolor=\"#f4f4f4\">\n<tr>\n<td align=\"center\">\n<table width=\"600\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" style=\"background-color: #ffffff; margin-top: 40px;\">\n\n<!-- Header (Title) - FULL WIDTH -->\n<tr>\n  <td colspan=\"2\" style=\"padding: 40px; text-align: center; background-color: #ffffff;\">\n    <h1 style=\"font-family: 'Fira Sans', Arial, sans-serif; font-size: 32px; color: #151515; margin: 0;\">This Week's Micro-SaaS Ideas</h1>\n  </td>\n</tr>\n\n<!-- SaaS Ideas (2 per row) -->\n${ideasContent}\n\n<!-- Footer (text) - FULL WIDTH -->\n<tr>\n  <td colspan=\"2\" style=\"padding: 20px; text-align: center; background-color: #f4f4f4;\">\n    <p style=\"font-family: 'Fira Sans', Arial, sans-serif; font-size: 14px; color: #999999; margin: 0;\">You're receiving this email because you subscribed to our Micro-SaaS ideas newsletter.</p>\n  </td>\n</tr>\n\n<!-- Footer (unsubscribe button) - FULL WIDTH -->\n<tr>\n  <td colspan=\"2\" style=\"padding: 20px; text-align: center; background-color: #f4f4f4;\">\n    <a href=\"https://your-unsubscribe-link.com\" style=\"display: inline-block; padding: 12px 24px; background-color: #e53935; color: #ffffff; font-family: 'Fira Sans', Arial, sans-serif; font-size: 16px; text-decoration: none; border-radius: 5px;\">\n      Unsubscribe\n    </a>\n  </td>\n</tr>\n\n</table>\n</td>\n</tr>\n</table>\n</body>\n</html>\n`;\n\nreturn [{ json: { html } }];\n"
+      },
+      "id": "424b1d25-015e-4143-9c73-5b30eb352be5",
+      "name": "Generate HTML for Newsletter",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1160,
+        -180
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "06yZxVkDroL9ASXv",
+          "cachedResultName": "Newsletter Send Email"
+        },
+        "workflowInputs": {
+          "value": {
+            "html": "={{ $json.html }}",
+            "newsletterType": "idea_report"
+          },
+          "schema": [
+            {
+              "id": "newsletterType",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "newsletterType",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "html",
+              "type": "string",
+              "display": true,
+              "required": false,
+              "displayName": "html",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "83d674c4-26b5-4459-a545-01aaf65da664",
+      "name": "Send emails to subscribers",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "position": [
+        1340,
+        -180
+      ],
+      "typeVersion": 1.2
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Generate HTML for Newsletter",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Execute Workflow1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Workflow1": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate HTML for Newsletter": {
+      "main": [
+        [
+          {
+            "node": "Send emails to subscribers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Test workflow’": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "36258f81-147c-4858-a721-d34b23530423",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4920a419623b1fa5f5df725a2d9e95766c10843e59b418ee634a61419987e876"
+  },
+  "id": "17ga74DrM9Ofye5t",
+  "tags": []
+}

@@ -1,0 +1,197 @@
+{
+  "name": "Newsletter Send Email",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "jsonExample",
+        "jsonExample": "{\n  \"newsletterType\": \"newsletter to be published\",\n  \"html\": \"htmlContent\"\n}"
+      },
+      "id": "7b6523f3-edc3-483d-9cf1-79899c6d3733",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        -260,
+        0
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "newsletter",
+          "cachedResultName": "newsletter"
+        },
+        "returnAll": true,
+        "where": {
+          "values": [
+            {
+              "column": "newsletter_type",
+              "value": "={{ $json.newsletterType }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7da54d4c-a376-4e45-97da-a0cca56f9f2b",
+      "name": "MySQL",
+      "type": "n8n-nodes-base.mySql",
+      "position": [
+        100,
+        0
+      ],
+      "typeVersion": 2.4,
+      "credentials": {
+        "mySql": {
+          "id": "yGNalRtB0QeQ1zRf",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "New Ideas Created",
+        "message": "={{ $json.html }}",
+        "options": {}
+      },
+      "id": "79a03e34-da5c-4caf-85f1-ecf2f951ba33",
+      "name": "Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "position": [
+        900,
+        240
+      ],
+      "webhookId": "56495bdd-f38e-4dc1-9d12-4aaac949b0a5",
+      "typeVersion": 2.1,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "2YKhqYlNdckf6ee0",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "id": "fc8d3bab-9b27-4a80-a130-36be7bca2852",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        420,
+        240
+      ],
+      "typeVersion": 3.1
+    },
+    {
+      "parameters": {
+        "jsCode": "\n\nreturn {result: $input.all()};\n"
+      },
+      "id": "a14a497c-87d0-4ea8-833d-53e7ed7f5f9d",
+      "name": "Code1",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        260,
+        80
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\n// This will hold the final output\nconst output = [];\n\nfor (const item of items) {\n  const newsletterHtml = item.json.html;\n  const results = item.json.result;\n\n  for (const userItem of results) {\n    const userData = userItem.json;\n    \n    output.push({\n      json: {\n        ...userData,\n        html: newsletterHtml\n      }\n    });\n  }\n}\n\nreturn output;\n"
+      },
+      "id": "3ff0c74e-cc6e-4544-a35f-32234c9fef1d",
+      "name": "Merge HTML with Contact",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        640,
+        240
+      ],
+      "typeVersion": 2
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail": {
+      "main": [
+        []
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Merge HTML with Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge HTML with Contact": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "MySQL",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "768dfddd-ff09-4f04-a2a3-a4d106386bfc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4920a419623b1fa5f5df725a2d9e95766c10843e59b418ee634a61419987e876"
+  },
+  "id": "06yZxVkDroL9ASXv",
+  "tags": []
+}

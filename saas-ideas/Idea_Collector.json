@@ -1,0 +1,579 @@
+{
+  "name": "Idea Collector",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "1f460239-98c9-4c44-afce-0783e9bd490d",
+      "name": "When clicking ‘Test workflow’",
+      "type": "n8n-nodes-base.manualTrigger",
+      "position": [
+        -540,
+        140
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a startup-savvy AI Entrepreneur Agent. Your mission is to analyze data from Reddit and generate or improve micro-SaaS product ideas.\n\nThe system provides you with structured Reddit data pulled from a MySQL reddit_post table, and previously generated ideas from a saas_ideas table.\n\nEach Reddit post includes:\ntitle\npost (body/selftext)\nusername\nupvotes\ndownvotes\nurl\n\nThe saas_ideas table may contain previously generated ideas with fields like:\nid (idea ID, auto generated number)\ncategory\nleads\ndescription\nposts (list of associated reddit_post IDs or URLs)\n\n🧠 Your Role:\nAct like a seasoned entrepreneur or product scout identifying micro-SaaS opportunities by analyzing Reddit discussions and refining or adding to a growing library of SaaS startup ideas.\n\n🛠 Instructions:\nRead each post from the reddit_post table and understand the pain point, unmet need, or market signal.\n\nCompare the new insights with entries in the saas_ideas table:\n\nIf a similar idea already exists, update or improve it, and include the id from the saas_ideas table.\n\nIf it's a new idea, do not include the id (leave the id field empty or null).\n\nGroup posts into broad SaaS categories, such as:\n\nAutomation Tools\n\nAI Utilities\n\nDeveloper Productivity\n\nCustomer Support\n\nCommunity Platforms\n\nAnalytics\n\nNiche Marketplaces\n\nSocial Media Tools\n\nRemote Work, etc.\n\nGenerate a micro-SaaS idea that is:\n\nSpecific and MVP-friendly\n\nBased on real Reddit pain points\n\nTargeted at underserved or niche markets\n\nWith a brief mention of competitors if applicable\n\nCollect usernames from the posts as potential early users (leads)\n\nInclude original post URLs that inspired the idea\n\n🔄 Output Format (Return Only Pure JSON)\nYou must return a valid JSON array, where each idea object has this structure:\n\n[\n  {\n    \"id\": 12, // If the idea already exists in `saas_ideas`; leave null or empty for new ideas\n    \"category\": \"Automation Tool\",\n    \"leads\": [\"potentialCustomer1\", \"potentialCustomer2\"],\n    \"description\": \"Micro-SaaS idea based on common issues found in Reddit posts. Explain the pain point, the opportunity, and any MVP angle. Mention competitors if applicable.\",\n    \"posts\": [\n      \"https://reddit.com/r/examplePost1\",\n      \"https://reddit.com/r/examplePost2\"\n    ]\n  }\n]\n✅ Your response must be a valid JSON array — no markdown, code blocks, or explanation.\n✅ If no ideas are found or relevant, return an empty array [].",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "id": "72428dc2-bc1a-40e8-bf7c-3ccf6299f86e",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        1300,
+        180
+      ],
+      "typeVersion": 1.8
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-pro-exp",
+        "options": {}
+      },
+      "id": "f2f0f4eb-f790-49f0-9492-3726961a070b",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        1300,
+        440
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "UYGDfReEenKELOHa",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  let rawString = item.json.output;\n\n// Step 1: Remove the markdown wrapping\nconst jsonString = rawString\n  .replace(/^```json\\s*/i, '') // remove the opening ```json (case-insensitive)\n  .replace(/```$/, '')         // remove the closing ``` (at the end)\n  .trim();\n\n\n return JSON.parse(jsonString);\n}"
+      },
+      "id": "e2d4be14-b0c9-4e44-b3ab-47602ae61ce6",
+      "name": "Code",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1660,
+        180
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "saas_ideas",
+          "cachedResultName": "saas_ideas"
+        },
+        "dataMode": "defineBelow",
+        "columnToMatchOn": "id",
+        "valueToMatchOn": "={{ $json.id }}",
+        "valuesToSend": {
+          "values": [
+            {
+              "column": "category",
+              "value": "={{ $json.category }}"
+            },
+            {
+              "column": "description",
+              "value": "={{ $json.description }}"
+            },
+            {
+              "column": "leads",
+              "value": "={{ $json.leads.join(\",\") }}"
+            },
+            {
+              "column": "posts",
+              "value": "={{ $json.posts.join(',') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "44a440c6-881d-46ed-b2f5-44956896978c",
+      "name": "MySQL",
+      "type": "n8n-nodes-base.mySql",
+      "position": [
+        1880,
+        180
+      ],
+      "typeVersion": 2.4,
+      "credentials": {
+        "mySql": {
+          "id": "yGNalRtB0QeQ1zRf",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "reddit_post",
+          "cachedResultName": "reddit_post"
+        },
+        "dataMode": "defineBelow",
+        "columnToMatchOn": "url",
+        "valueToMatchOn": "={{ $json.data.url }}",
+        "valuesToSend": {
+          "values": [
+            {
+              "column": "author",
+              "value": "={{ $json.data.author }}"
+            },
+            {
+              "column": "title",
+              "value": "={{ $json.data.title }}"
+            },
+            {
+              "column": "post",
+              "value": "={{ $json.data.selftext }}"
+            },
+            {
+              "column": "ups",
+              "value": "={{ $json.data.ups }}"
+            },
+            {
+              "column": "downs",
+              "value": "={{ $json.data.downs }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9f544aed-960a-4e8a-9530-df46e65c874f",
+      "name": "Insert or Update Post",
+      "type": "n8n-nodes-base.mySql",
+      "position": [
+        780,
+        180
+      ],
+      "typeVersion": 2.4,
+      "alwaysOutputData": false,
+      "credentials": {
+        "mySql": {
+          "id": "yGNalRtB0QeQ1zRf",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://www.reddit.com/r/SideProject/top.json",
+        "options": {}
+      },
+      "id": "f5a5f046-3bd6-429d-965a-ef8b873df358",
+      "name": "/r/SideProject/",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -20,
+        80
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "url": "https://www.reddit.com/r/sidehustle/top.json",
+        "options": {}
+      },
+      "id": "0fba95be-3638-4e94-8098-be3c5d9e67a5",
+      "name": "/r/sidehustle/",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -20,
+        280
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "url": "https://www.reddit.com/r/startups/top.json",
+        "options": {}
+      },
+      "id": "1cc05c39-beed-435e-9336-c588fb1c332b",
+      "name": "/r/startups/",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -20,
+        480
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "reddit_post",
+          "cachedResultName": "reddit_post"
+        },
+        "returnAll": true,
+        "where": {
+          "values": [
+            {
+              "column": "processed",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "176c2ada-e411-4579-ba26-6057452fe5c5",
+      "name": "FetchAllPosts",
+      "type": "n8n-nodes-base.mySqlTool",
+      "position": [
+        1420,
+        640
+      ],
+      "typeVersion": 2.4,
+      "credentials": {
+        "mySql": {
+          "id": "yGNalRtB0QeQ1zRf",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nlet response = [];\nfor (const item of $input.all()) {\n  for (const child of item.json.data.children) {\n    response.push(child);\n  }\n}\n\nreturn response;"
+      },
+      "id": "5080130a-86a1-4970-abd7-53e23aeaffd0",
+      "name": "Merge All",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        500,
+        180
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "id": "d7694b62-d0b2-46bd-b002-d58f304aaca5",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        260,
+        160
+      ],
+      "typeVersion": 3.1
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "saas_ideas",
+          "cachedResultName": "saas_ideas"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "1024959e-38f5-4383-a6bd-686a35645180",
+      "name": "Saas Ideas",
+      "type": "n8n-nodes-base.mySqlTool",
+      "position": [
+        1560,
+        640
+      ],
+      "typeVersion": 2.4,
+      "credentials": {
+        "mySql": {
+          "id": "yGNalRtB0QeQ1zRf",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nreturn {\n  \"success\": true\n};"
+      },
+      "id": "48080f2a-59f5-4877-88f2-c1216f326e11",
+      "name": "Single",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1040,
+        180
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "url": "https://www.reddit.com/r/SaaS/top.json",
+        "options": {}
+      },
+      "id": "28cbcfc4-ec25-44ab-ad93-6b3272a571e9",
+      "name": "/r/SaaS/",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -20,
+        -120
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "update reddit_post set processed = true where 1=1;",
+        "options": {}
+      },
+      "id": "63761c11-a66e-4689-8256-f5e34763f902",
+      "name": "Set All Posts Processed",
+      "type": "n8n-nodes-base.mySql",
+      "position": [
+        1880,
+        380
+      ],
+      "typeVersion": 2.4,
+      "credentials": {
+        "mySql": {
+          "id": "yGNalRtB0QeQ1zRf",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "id": "52b64be4-e1a7-4d14-8dd5-d720cbe0522f",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        -540,
+        380
+      ],
+      "typeVersion": 1.2
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "MySQL",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Set All Posts Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Merge All",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Single": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "/r/SaaS/": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge All": {
+      "main": [
+        [
+          {
+            "node": "Insert or Update Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Saas Ideas": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "/r/startups/": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "FetchAllPosts": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "/r/sidehustle/": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "/r/SideProject/": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "/r/SaaS/",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "/r/SideProject/",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "/r/sidehustle/",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "/r/startups/",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert or Update Post": {
+      "main": [
+        [
+          {
+            "node": "Single",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Test workflow’": {
+      "main": [
+        [
+          {
+            "node": "/r/SaaS/",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "/r/SideProject/",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "/r/sidehustle/",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "/r/startups/",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "ade87ce9-e574-4a32-99d4-5be195b5af68",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4920a419623b1fa5f5df725a2d9e95766c10843e59b418ee634a61419987e876"
+  },
+  "id": "YBGQORe4LTGfOJ8K",
+  "tags": []
+}
