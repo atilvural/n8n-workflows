@@ -29,6 +29,12 @@ CREATE TABLE saas_ideas (
 - Ideas are saved into saas_ideas table.
 - Marks processed posts.
 
+### Idea Approver (New Feature)
+A new feature has been added to streamline the review process. The workflow now sends Discord messages to a designated channel, allowing you to review ideas directly without needing to access the database. Note: The channel IDs in the workflow are placeholders and must be updated with your actual channel IDs to use this feature.
+
+### Discord Integration (Optional)
+If you'd like to use Discord to approve or disapprove ideas, you can create a Discord bot. The bot can send generated ideas to a specific channel for review and update their status based on user feedback.
+
 ### Requirements
 - MySQL database access.
 - Google Gemini API key (for AI analysis).

@@ -22,15 +22,15 @@
         "guildId": {
           "__rl": true,
           "mode": "list",
-          "value": "1240275995999866924",
-          "cachedResultUrl": "https://discord.com/channels/1240275995999866924",
-          "cachedResultName": "XOD Apps"
+          "value": "123123123",
+          "cachedResultUrl": "https://discord.com/channels/123123123",
+          "cachedResultName": "Channel"
         },
         "channelId": {
           "__rl": true,
           "mode": "list",
-          "value": "1363953712866918522",
-          "cachedResultUrl": "https://discord.com/channels/1240275995999866924/1363953712866918522",
+          "value": "123123",
+          "cachedResultUrl": "https://discord.com/channels/123123/123123123",
           "cachedResultName": "saas-ideas"
         },
         "message": "=*New Idea {{ $json.category }}* \n{{ $json.description }}\n\nMerged {{ $json.mergedIdeas?.length || 0 }} ideas. Potential {{ $json.leads?.length || 0 }} users",
